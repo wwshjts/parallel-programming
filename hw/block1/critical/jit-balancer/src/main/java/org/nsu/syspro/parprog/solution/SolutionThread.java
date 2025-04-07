@@ -14,6 +14,7 @@ public class SolutionThread extends UserThread {
      */
     //private final static HashMap<Long, CompiledMethod> compiledMethods = new HashMap<>();
     private final static Map<Long, CompiledMethod> compiledMethods = new ReadMostMap<>();
+    private final static ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     private final static int l1Bound = 5_000;
     private final static int l2Bound = 50_000;
@@ -26,28 +27,43 @@ public class SolutionThread extends UserThread {
     private final Map<Long, Long> hotness = new HashMap<>();
 
     @Override
-    public ExecutionResult executeMethod(MethodID id) {
-        final long methodID = id.id();
-        final long hotLevel = hotness.getOrDefault(methodID, 0L);
-        hotness.put(methodID, hotLevel + 1);
+    public ExecutionResult executeMethod(MethodID methodID) {
+        final long id = methodID.id();
+        final long hotLevel = hotness.getOrDefault(id, 0L);
+        hotness.put(id, hotLevel + 1);
+
+        if (compiledMethods.containsKey(id)) {
+            return exec.execute(compiledMethods.get(id));
+        }
 
         if (hotLevel > l1Bound) {
-            final CompiledMethod code = compiler.compile_l1(id);
-            Thread compilationThread = new Thread(() -> {
-                compiler.compile_l1(id);
-                compiledMethods.putIfAbsent(methodID, code);
-            });
-            compilationThread.start();
+            pool.submit(makeRequest(methodID));
         }
 
-        if (compiledMethods.containsKey(methodID)) {
-            return exec.execute(compiledMethods.get(methodID));
-        }
-
-        return exec.interpret(id);
+        return exec.interpret(methodID);
     }
 
-    // TODO: add methods
-    // TODO: add inner classes
-    // TODO: add utility classes in the same package
+    private static enum JitLevel {
+        L1, L2
+    }
+
+    private CompilationRequest makeRequest(MethodID methodID) {
+        return new CompilationRequest(methodID,JitLevel.L1);
+    }
+
+    private class CompilationRequest implements Runnable {
+        private final MethodID methodID;
+        private final JitLevel level;
+
+        private CompilationRequest(MethodID methodID, JitLevel level) {
+            this.methodID = methodID;
+            this.level = level;
+        }
+
+        @Override
+        public void run() {
+            CompiledMethod code = compiler.compile_l1(methodID); // <- quants lost
+            compiledMethods.putIfAbsent(methodID.id(), code);
+        }
+    }
 }
