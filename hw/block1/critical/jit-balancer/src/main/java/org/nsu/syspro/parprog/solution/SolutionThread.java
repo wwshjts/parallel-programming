@@ -12,9 +12,11 @@ public class SolutionThread extends UserThread {
     /**
      * Shared state of all user threads
      */
-    private final static HashMap<Long, CompiledMethod> compiledMethods = new HashMap<>();
+    //private final static HashMap<Long, CompiledMethod> compiledMethods = new HashMap<>();
+    private final static Map<Long, CompiledMethod> compiledMethods = new ReadMostMap<>();
 
-    private final static Lock setLock = new ReentrantLock();
+    private final static int l1Bound = 6_000;
+    private final static int l2Bound = 50_000;
 
     // TODO: add fields here!
     public SolutionThread(int compilationThreadBound, ExecutionEngine exec, CompilationEngine compiler, Runnable r) {
@@ -29,23 +31,13 @@ public class SolutionThread extends UserThread {
         final long hotLevel = hotness.getOrDefault(methodID, 0L);
         hotness.put(methodID, hotLevel + 1);
 
-        setLock.lock();
-        try {
-            if (compiledMethods.containsKey(methodID)) {
-                return exec.execute(compiledMethods.get(methodID));
-            }
-        } finally {
-            setLock.unlock();
+        if (compiledMethods.containsKey(methodID)) {
+            return exec.execute(compiledMethods.get(methodID));
         }
 
-        if (hotLevel > 9_000) {
+        if (hotLevel > l1Bound) {
             final CompiledMethod code = compiler.compile_l1(id);
-            setLock.lock();
-            try {
-                compiledMethods.putIfAbsent(methodID, code);
-            } finally {
-                setLock.unlock();
-            }
+            compiledMethods.putIfAbsent(methodID, code);
         }
 
 
