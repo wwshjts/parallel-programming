@@ -8,8 +8,8 @@ import java.util.*;
 public class SolutionThread extends UserThread {
     private final Balancer balancer;
 
-    private final static int l1Bound = 6_000;
-    private final static int hardl1Bound = 9_000;
+    private final static int l1Bound = 7_000;
+    private final static int hardl1Bound = 9_900;
     private final static int l2Bound = 50_000;
 
     public SolutionThread(int compilationThreadBound, ExecutionEngine exec, CompilationEngine compiler, Runnable r) {

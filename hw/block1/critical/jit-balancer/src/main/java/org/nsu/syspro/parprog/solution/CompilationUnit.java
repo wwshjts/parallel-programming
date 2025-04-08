@@ -23,9 +23,7 @@ public class CompilationUnit {
     private CompiledMethod code     = null;
     private State state             = State.CREATED;
 
-    private CompilationResult concurrentState;
-
-    private static enum State {
+    private enum State {
         CREATED, ON_COMPILATION, COMPILED
     }
 
@@ -71,10 +69,6 @@ public class CompilationUnit {
         this.engine = engine;
     }
 
-    public long getID() {
-        return methodID.id();
-    }
-
     // Transition to CREATED -> ON_COMPILATION
     // Happens under the lock but compilation is async
     public void startCompilation() {
@@ -90,32 +84,10 @@ public class CompilationUnit {
         }
     }
 
-    public static enum JitLevel {
+    public enum JitLevel {
         INTERPRETED, L1, L2
     }
 
-
-    public static class CompilationResult {
-        private final CompiledMethod code;
-        private final JitLevel level;
-
-        private CompilationResult(CompiledMethod code, JitLevel level) {
-            this.code = code;
-            this.level = level;
-        }
-
-        public static CompilationResult of(CompiledMethod code, JitLevel level) {
-           return new CompilationResult(code, level);
-        }
-
-        public JitLevel getLevel() {
-            return level;
-        }
-
-        public CompiledMethod getCode() {
-            return code;
-        }
-    }
 
     // The 'function' that async compiles method, then
     // makes transition of state machine
