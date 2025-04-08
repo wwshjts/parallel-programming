@@ -79,6 +79,16 @@ public class ReadMostMap<K, V> implements Map<K, V> {
     }
 
     @Override
+    public V getOrDefault(Object key, V defaultValue) {
+        lock.readLock().lock();
+        try {
+            return map.getOrDefault(key, defaultValue);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
     public V remove(Object key) {
         lock.writeLock().lock();
         try {
