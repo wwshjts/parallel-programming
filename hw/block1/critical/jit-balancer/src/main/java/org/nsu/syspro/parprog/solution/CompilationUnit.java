@@ -6,9 +6,7 @@ import org.nsu.syspro.parprog.external.MethodID;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.*;
 
 public class CompilationUnit {
     private static final ExecutorService compiler = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -16,8 +14,8 @@ public class CompilationUnit {
     private final MethodID methodID;
     private final CompilationEngine engine;
 
-    private final Lock lock = new ReentrantLock();
-    private final Condition isCompiled = lock.newCondition();
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Condition isCompiled = lock.writeLock().newCondition();
 
     private JitLevel level = JitLevel.INTERPRETED;
     private CompiledMethod code     = null;
@@ -28,16 +26,16 @@ public class CompilationUnit {
     }
 
     public boolean isCompiled() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return state == State.COMPILED;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public CompiledMethod waitCompilation() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             assert state == State.ON_COMPILATION : "Expected state 'ON_COMPILATION', current:  " + state;
 
@@ -47,19 +45,19 @@ public class CompilationUnit {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public CompiledMethod getCode() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             assert state == State.COMPILED : "Wrong state in getCode: " + state;
             assert code != null;
 
             return code;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
 
     }
@@ -72,7 +70,7 @@ public class CompilationUnit {
     // Transition to CREATED -> ON_COMPILATION
     // Happens under the lock but compilation is async
     public void startCompilation() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (state == State.CREATED) {
                 //System.out.println("Starting compile");
@@ -80,7 +78,7 @@ public class CompilationUnit {
                 state = State.ON_COMPILATION;
             }
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -112,7 +110,7 @@ public class CompilationUnit {
             }
 
             // Transition ON_COMPILATION -> COMPILED begins
-            lock.lock();
+            lock.writeLock().lock();
             try {
                 assert state == State.ON_COMPILATION;
                 code = newCode;
@@ -123,7 +121,7 @@ public class CompilationUnit {
 
                 isCompiled.signalAll();
             } finally {
-                lock.unlock();
+                lock.writeLock().unlock();
             }
         }
     }
