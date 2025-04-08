@@ -28,7 +28,7 @@ public class CompilationUnit {
     public boolean isCompiled() {
         lock.readLock().lock();
         try {
-            return state == State.COMPILED;
+            return level.ordinal() > JitLevel.INTERPRETED.ordinal();
         } finally {
             lock.readLock().unlock();
         }
@@ -122,7 +122,7 @@ public class CompilationUnit {
                 level = localLevel;
                 state = State.COMPILED;
 
-                //System.out.println("Compiled: " + methodID.id());
+                // System.out.println("Compiled: " + methodID.id());
 
                 isCompiled.signalAll();
             } finally {
