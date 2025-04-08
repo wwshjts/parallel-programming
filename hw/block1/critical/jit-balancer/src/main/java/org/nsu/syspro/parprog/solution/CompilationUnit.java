@@ -74,8 +74,8 @@ public class CompilationUnit {
         try {
             if (state == State.CREATED) {
                 // System.out.println("Starting compile" + methodID.id());
-                compiler.submit(new CompileTask()); // start compile asynchronously
                 state = State.ON_COMPILATION;
+                compiler.submit(new CompileTask(level)); // start compile asynchronously
             }
         } finally {
             lock.writeLock().unlock();
@@ -90,23 +90,28 @@ public class CompilationUnit {
     // The 'function' that async compiles method, then
     // makes transition of state machine
     private class CompileTask implements Runnable {
+        private JitLevel localLevel;
+
+        public CompileTask(JitLevel localLevel) {
+            this.localLevel = localLevel;
+        }
+
         @Override
         public void run() {
             // No switch expressions :(
             CompiledMethod newCode;
-            JitLevel newLevel;
-            switch (level)  {
+            switch (localLevel)  {
                 case INTERPRETED:
                     newCode = engine.compile_l1(methodID);
-                    newLevel = JitLevel.L1;
+                    localLevel = JitLevel.L1;
                     break;
                 case L1:
                     newCode = engine.compile_l2(methodID);
-                    newLevel = JitLevel.L2;
+                    localLevel = JitLevel.L2;
                     break;
                 default:
                     assert false : "Wrong state of state machine: Can't promote method from L2 level";
-                    newCode = null; newLevel = null;
+                    newCode = null; localLevel = null;
             }
 
             // Transition ON_COMPILATION -> COMPILED begins
@@ -114,7 +119,7 @@ public class CompilationUnit {
             try {
                 assert state == State.ON_COMPILATION;
                 code = newCode;
-                level = newLevel;
+                level = localLevel;
                 state = State.COMPILED;
 
                 //System.out.println("Compiled: " + methodID.id());
