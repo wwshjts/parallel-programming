@@ -1,74 +1,31 @@
 package org.nsu.syspro.parprog.solution;
 
-import org.nsu.syspro.parprog.external.CompiledMethod;
+import org.nsu.syspro.parprog.external.CompilationEngine;
 import org.nsu.syspro.parprog.external.MethodID;
+import org.nsu.syspro.parprog.solution.CompilationUnit.CompilationResult;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
- * Manages compilation requests
- * Keeps invariant - there is no two compilation request with the same method ID that compiles
+ * Manges compilation resources
  */
-public class Balancer {
-    private final static Compiler compiler = new Compiler();
+public class Compiler {
+    private final ConcurrentHashMap<Long, CompilationUnit> units = new ConcurrentHashMap<>();
+    private final CompilationEngine engine;
 
-    private final static Map<Long, Future<CompiledMethod>> scheduled = new HashMap<>();
-    private final static Map<Long, CompilationUnit>  requests = new HashMap<>();
-    private final static ExecutorService pool = Executors.newCachedThreadPool();
-
-    public CompiledMethod getCompiled(MethodID methodID) {
-        synchronized (scheduled) {
-            long id = methodID.id();
-            if (scheduled.containsKey(id)) {
-               var future = scheduled.get(id);
-               if (future.isDone()) {
-                   try {
-                       return future.get();
-                   } catch (ExecutionException | InterruptedException e) {
-                       throw new RuntimeException(e);
-                   }
-               }
-            }
-            return null;
-        }
+    public Compiler(CompilationEngine engine) {
+        this.engine = engine;
     }
 
-    public Future<CompiledMethod> getFuture(MethodID methodID) {
-        synchronized (scheduled) {
-            assert scheduled.containsKey(methodID.id());
+    public boolean isCompiled() {
 
-            return scheduled.get(methodID.id());
-        }
     }
 
-    public void makeRequest(CompilationUnit request) {
-        pool.submit(Request.of(request));
+    public void scheduleCompilation(MethodID methodID, CompilationEngine engine) {
+       units.putIfAbsent(methodID.id(), new CompilationUnit(methodID, engine));
     }
 
-    private static class Request implements Runnable {
-        private final CompilationUnit request;
-
-        private Request(CompilationUnit request) {
-            this.request = request;
-        }
-
-        public static Request of(CompilationUnit request) {
-            return new Request(request);
-        }
-
-        public long getId() {
-            return request.getID();
-        }
-
-        @Override
-        public void run() {
-            synchronized (scheduled) { // <- so those things runs close to sequence evaluation
-                if (!scheduled.containsKey(request.getID())) {
-                    scheduled.put(request.getID(), compiler.compile(request));
-                }
-            }
-        }
-    }
 }
