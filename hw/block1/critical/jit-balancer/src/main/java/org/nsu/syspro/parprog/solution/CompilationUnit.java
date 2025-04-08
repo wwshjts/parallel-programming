@@ -73,7 +73,7 @@ public class CompilationUnit {
         lock.writeLock().lock();
         try {
             if (state == State.CREATED) {
-                //System.out.println("Starting compile");
+                // System.out.println("Starting compile" + methodID.id());
                 compiler.submit(new CompileTask()); // start compile asynchronously
                 state = State.ON_COMPILATION;
             }
