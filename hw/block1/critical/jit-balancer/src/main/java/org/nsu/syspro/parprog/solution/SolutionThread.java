@@ -5,7 +5,6 @@ import org.nsu.syspro.parprog.external.*;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.*;
 
 public class SolutionThread extends UserThread {
     private final static Balancer balancer = new Balancer();
@@ -41,7 +40,7 @@ public class SolutionThread extends UserThread {
         }
 
         if (hotLevel > l1Bound) {
-            balancer.makeRequest(new CompilationRequest(methodID, Compiler.JitLevel.L1, compiler));
+            balancer.makeRequest(new CompilationUnit(methodID, CompilationUnit.JitLevel.L1, compiler));
         }
 
         return exec.interpret(methodID);

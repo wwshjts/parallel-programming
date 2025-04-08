@@ -1,15 +1,11 @@
 package org.nsu.syspro.parprog.solution;
 
-import org.nsu.syspro.parprog.external.CompilationEngine;
 import org.nsu.syspro.parprog.external.CompiledMethod;
 import org.nsu.syspro.parprog.external.MethodID;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Manages compilation requests
@@ -19,7 +15,7 @@ public class Balancer {
     private final static Compiler compiler = new Compiler();
 
     private final static Map<Long, Future<CompiledMethod>> scheduled = new HashMap<>();
-    private final static Map<Long,  CompilationRequest>  requests = new HashMap<>();
+    private final static Map<Long, CompilationUnit>  requests = new HashMap<>();
     private final static ExecutorService pool = Executors.newCachedThreadPool();
 
     public CompiledMethod getCompiled(MethodID methodID) {
@@ -47,18 +43,18 @@ public class Balancer {
         }
     }
 
-    public void makeRequest(CompilationRequest request) {
+    public void makeRequest(CompilationUnit request) {
         pool.submit(Request.of(request));
     }
 
     private static class Request implements Runnable {
-        private final CompilationRequest request;
+        private final CompilationUnit request;
 
-        private Request(CompilationRequest request) {
+        private Request(CompilationUnit request) {
             this.request = request;
         }
 
-        public static Request of(CompilationRequest request) {
+        public static Request of(CompilationUnit request) {
             return new Request(request);
         }
 
