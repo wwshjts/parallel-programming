@@ -29,9 +29,45 @@ public class CompilationUnit {
         CREATED, ON_COMPILATION, COMPILED
     }
 
-    public CompilationUnit(MethodID methodID, JitLevel level, CompilationEngine engine) {
+    public boolean isCompiled() {
+        lock.lock();
+        try {
+            return state == State.COMPILED;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public CompiledMethod waitCompilation() {
+        lock.lock();
+        try {
+            assert state == State.ON_COMPILATION : "Expected state 'ON_COMPILATION', current:  " + state;
+
+            while (state != State.COMPILED) isCompiled.await();
+
+            return code;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public CompiledMethod getCode() {
+        lock.lock();
+        try {
+            assert state == State.COMPILED : "Wrong state in getCode: " + state;
+            assert code != null;
+
+            return code;
+        } finally {
+            lock.unlock();
+        }
+
+    }
+
+    public CompilationUnit(MethodID methodID, CompilationEngine engine) {
         this.methodID = methodID;
-        this.level = level;
         this.engine = engine;
     }
 
@@ -45,6 +81,7 @@ public class CompilationUnit {
         lock.lock();
         try {
             if (state == State.CREATED) {
+                //System.out.println("Starting compile");
                 compiler.submit(new CompileTask()); // start compile asynchronously
                 state = State.ON_COMPILATION;
             }
@@ -109,6 +146,10 @@ public class CompilationUnit {
                 code = newCode;
                 level = newLevel;
                 state = State.COMPILED;
+
+                //System.out.println("Compiled: " + methodID.id());
+
+                isCompiled.signalAll();
             } finally {
                 lock.unlock();
             }
