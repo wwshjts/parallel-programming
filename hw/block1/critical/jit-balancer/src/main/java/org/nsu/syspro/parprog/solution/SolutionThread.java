@@ -8,10 +8,9 @@ import java.util.*;
 public class SolutionThread extends UserThread {
     private final Balancer balancer;
 
-
     public SolutionThread(int compilationThreadBound, ExecutionEngine exec, CompilationEngine compiler, Runnable r) {
         super(compilationThreadBound, exec, compiler, r);
-        balancer = new Balancer(compiler);
+        balancer = new Balancer(compilationThreadBound, compiler);
     }
 
     private final Map<Long, Long> hotness = new HashMap<>();

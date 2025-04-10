@@ -4,15 +4,13 @@ import org.nsu.syspro.parprog.external.CompilationEngine;
 import org.nsu.syspro.parprog.external.CompiledMethod;
 import org.nsu.syspro.parprog.external.MethodID;
 
-import java.awt.event.HierarchyBoundsAdapter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.*;
 
 public class CompilationUnit {
-    private static final ExecutorService compiler = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    private static ExecutorService compilerWorkers;
+    private static final ReadWriteLock wierdWorkersLock = new ReentrantReadWriteLock();
 
     private final MethodID methodID;
     private final CompilationEngine engine;
@@ -20,6 +18,7 @@ public class CompilationUnit {
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Condition isCompiled = lock.writeLock().newCondition();
     private long hotness = 0;
+    private final int workersBound;
 
     private JitLevel level          = JitLevel.INTERPRETED;
     private CompiledMethod code     = null;
@@ -83,9 +82,10 @@ public class CompilationUnit {
 
     }
 
-    public CompilationUnit(MethodID methodID, CompilationEngine engine) {
+    public CompilationUnit(MethodID methodID, CompilationEngine engine, int workersBound) {
         this.methodID = methodID;
         this.engine = engine;
+        this.workersBound = workersBound;
     }
 
     // Transition to CREATED -> ON_COMPILATION
@@ -95,7 +95,7 @@ public class CompilationUnit {
             assert required.ordinal() > level.ordinal();
             // System.out.println("Starting compile" + methodID.id());
             state = State.ON_COMPILATION;
-            compiler.submit(new CompileTask(required)); // start compile asynchronously
+            compilerWorkers.submit(new CompileTask(required)); // start compile asynchronously
         }
     }
 
@@ -153,5 +153,25 @@ public class CompilationUnit {
             return JitLevel.L1;
         }
         return JitLevel.L2;
+    }
+
+    public static boolean isPoolInitialized() {
+        wierdWorkersLock.readLock().lock();
+        try {
+            return compilerWorkers != null;
+        } finally {
+            wierdWorkersLock.readLock().unlock();
+        }
+    }
+
+    public void initializePool() {
+        wierdWorkersLock.writeLock().lock();
+        try {
+            if (compilerWorkers == null) {
+                compilerWorkers = Executors.newFixedThreadPool(workersBound);
+            }
+        } finally {
+            wierdWorkersLock.writeLock().unlock();
+        }
     }
 }

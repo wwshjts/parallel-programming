@@ -5,6 +5,9 @@ import org.nsu.syspro.parprog.external.CompiledMethod;
 import org.nsu.syspro.parprog.external.MethodID;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Manges compilation resources
@@ -12,9 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Balancer {
     private final static ConcurrentHashMap<Long, CompilationUnit> units = new ConcurrentHashMap<>();
     private final CompilationEngine engine;
+    private final int threadBound;
 
-    public Balancer(CompilationEngine engine) {
+
+    public Balancer(int threadBound, CompilationEngine engine) {
         this.engine = engine;
+        this.threadBound = threadBound;
     }
 
     public boolean isCompiled(MethodID methodID) {
@@ -33,7 +39,10 @@ public class Balancer {
 
     // might be blocking
     public void incrementHotness(MethodID methodID) {
-        units.computeIfAbsent(methodID.id(), id -> new CompilationUnit(methodID, engine)).incrementHotness();
+        var unit = units.computeIfAbsent(methodID.id(), id -> new CompilationUnit(methodID, engine, threadBound));
+        if (!CompilationUnit.isPoolInitialized()) {
+            unit.initializePool();
+        }
     }
 
 
