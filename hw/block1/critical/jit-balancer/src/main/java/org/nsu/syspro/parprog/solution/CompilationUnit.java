@@ -18,7 +18,7 @@ public class CompilationUnit {
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Condition isCompiled = lock.writeLock().newCondition();
-    private AtomicLong hotness = new AtomicLong(0);
+    private long hotness = 0;
 
     private JitLevel level = JitLevel.INTERPRETED;
     private CompiledMethod code     = null;
@@ -30,12 +30,15 @@ public class CompilationUnit {
 
     // Potentially blocking
     public void incrementHotness() {
-        JitLevel hotLevel = hotnessToLevel(hotness.addAndGet(1));
-
-        if (hotLevel.ordinal() > level.ordinal()) {
-            startCompilation(hotLevel);
+        lock.writeLock().lock();
+        try {
+            JitLevel requiredLevel = hotnessToLevel(++hotness);
+            if (requiredLevel.ordinal() > level.ordinal()) {
+                startCompilation(requiredLevel);
+            }
+        } finally {
+            lock.writeLock().unlock();
         }
-
     }
 
 
@@ -48,13 +51,16 @@ public class CompilationUnit {
         }
     }
 
-    public CompiledMethod waitCompilation() {
+    public CompiledMethod waitCompilation(JitLevel requiredLevel) {
         lock.writeLock().lock();
         try {
-            assert state == State.ON_COMPILATION : "Expected state 'ON_COMPILATION', current:  " + state;
+            if (requiredLevel.ordinal() > level.ordinal()) {
+                startCompilation(requiredLevel);
 
-            while (state != State.COMPILED) isCompiled.await();
+                while (state != State.COMPILED) isCompiled.await();
 
+                assert requiredLevel.ordinal() == level.ordinal();
+            }
             return code;
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -66,7 +72,7 @@ public class CompilationUnit {
     public CompiledMethod getCode() {
         lock.readLock().lock();
         try {
-            assert state == State.COMPILED : "Wrong state in getCode: " + state;
+            assert level.ordinal() > JitLevel.INTERPRETED.ordinal() : "Wrong state in getCode: " + state;
             assert code != null;
 
             return code;
@@ -83,17 +89,12 @@ public class CompilationUnit {
 
     // Transition to CREATED -> ON_COMPILATION
     // Happens under the lock but compilation is async
-    public void startCompilation(JitLevel required) {
-        lock.writeLock().lock();
-        try {
-            if (state == State.CREATED) {
-                assert required.ordinal() > level.ordinal();
-                // System.out.println("Starting compile" + methodID.id());
-                state = State.ON_COMPILATION;
-                compiler.submit(new CompileTask(required)); // start compile asynchronously
-            }
-        } finally {
-            lock.writeLock().unlock();
+    private void startCompilation(JitLevel required) {
+        if (state == State.CREATED || state == State.COMPILED) {
+            assert required.ordinal() > level.ordinal();
+            // System.out.println("Starting compile" + methodID.id());
+            state = State.ON_COMPILATION;
+            compiler.submit(new CompileTask(required)); // start compile asynchronously
         }
     }
 

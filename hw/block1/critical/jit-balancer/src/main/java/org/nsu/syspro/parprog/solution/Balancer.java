@@ -31,24 +31,17 @@ public class Balancer {
         return units.get(id).getCode();
     }
 
-    public void scheduleCompilation(MethodID methodID) {
-        var unit = new CompilationUnit(methodID, engine);
-        units.putIfAbsent(methodID.id(), unit);
-        unit = units.get(methodID.id());
-        unit.startCompilation(CompilationUnit.JitLevel.L1);
-    }
-
     // might be blocking
     public void incrementHotness(MethodID methodID) {
         units.computeIfAbsent(methodID.id(), id -> new CompilationUnit(methodID, engine)).incrementHotness();
     }
 
 
-    public CompiledMethod waitCompilation(MethodID methodID) {
+    public CompiledMethod waitCompilation(MethodID methodID, CompilationUnit.JitLevel requiredLevel) {
         long id = methodID.id();
         assert units.containsKey(id);
 
-        return units.get(id).waitCompilation();
+        return units.get(id).waitCompilation(requiredLevel);
     }
 
 }

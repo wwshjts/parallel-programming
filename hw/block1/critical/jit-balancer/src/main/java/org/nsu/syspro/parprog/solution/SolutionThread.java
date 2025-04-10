@@ -27,13 +27,15 @@ public class SolutionThread extends UserThread {
             result = exec.execute(balancer.getCompiledMethod(methodID));
         } else {
             result = exec.interpret(methodID);
-
-            if (hotLevel > Tuner.interpretationLimit) {
-                balancer.waitCompilation(methodID);
-            }
         }
 
         balancer.incrementHotness(methodID);
+
+        if (hotLevel > Tuner.l1ExecutionLimit) {
+            balancer.waitCompilation(methodID, CompilationUnit.JitLevel.L2);
+        } else if (hotLevel > Tuner.interpretationLimit) {
+            balancer.waitCompilation(methodID, CompilationUnit.JitLevel.L1);
+        }
 
         return result;
     }
