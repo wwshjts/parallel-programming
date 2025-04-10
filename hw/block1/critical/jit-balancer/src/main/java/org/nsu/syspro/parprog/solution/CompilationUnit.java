@@ -28,7 +28,6 @@ public class CompilationUnit {
         CREATED, ON_COMPILATION, COMPILED
     }
 
-    // Potentially blocking
     public void incrementHotness() {
         lock.writeLock().lock();
         try {

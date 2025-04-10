@@ -14,9 +14,14 @@ public class SolutionThread extends UserThread {
     }
 
     private final Map<Long, Long> hotness = new HashMap<>();
+    private final Map<Long, Long> compiledMethods = new HashMap<>();
 
     @Override
     public ExecutionResult executeMethod(MethodID methodID) {
+        /* -- Start of critical fast-path
+         * No global synchronisation used at this section
+         *
+         */
         final long id = methodID.id();
         final long hotLevel = hotness.getOrDefault(id, 0L);
         hotness.put(id, hotLevel + 1);

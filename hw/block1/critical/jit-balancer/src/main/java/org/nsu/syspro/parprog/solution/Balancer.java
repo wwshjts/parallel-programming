@@ -40,6 +40,7 @@ public class Balancer {
     // might be blocking
     public void incrementHotness(MethodID methodID) {
         var unit = units.computeIfAbsent(methodID.id(), id -> new CompilationUnit(methodID, engine, threadBound));
+        unit.incrementHotness();
         if (!CompilationUnit.isPoolInitialized()) {
             unit.initializePool();
         }
