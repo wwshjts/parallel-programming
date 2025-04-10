@@ -8,6 +8,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.*;
 
+/**
+ * Compilation unit encapsulates the state of method in VM
+ * It is guaranteed that level of optimised compilation increases while hotness is increases
+ * After highest level of optimised compilation no observable changes happens in this class
+ */
 public class CompilationUnit {
     private static ExecutorService compilerWorkers;
     private static final ReadWriteLock wierdWorkersLock = new ReentrantReadWriteLock();
@@ -25,9 +30,18 @@ public class CompilationUnit {
     private State state             = State.CREATED;
 
     private enum State {
-        CREATED, ON_COMPILATION, COMPILED
+        CREATED,        // Start state of state machine, visited exactly once
+        ON_COMPILATION, // Method is in this state if and only if it scheduled on compilation
+                        // Every scheduled compilation succeeds
+                        // this state can't be visited more than twice
+        COMPILED        // After visited this state predicate `isCompiled` always true
+                        // this state can't be visited more than twice
     }
 
+    /**
+     * Increments hotness of method
+     * Always write blocking :(
+     */
     public void incrementHotness() {
         lock.writeLock().lock();
         try {
@@ -41,15 +55,33 @@ public class CompilationUnit {
     }
 
 
+    /**
+     * If this method once returns true, then every call `getCode` method
+     * succeeds and returns compiled version of method
+     *
+     * This method only reads data from CompilationUnit
+     * @see #getCode
+     * @return true if this unit can provide compiled version of method,
+     * false otherwise
+     */
     public boolean isCompiled() {
         lock.readLock().lock();
         try {
-            return level.ordinal() > JitLevel.INTERPRETED.ordinal();
+            if (level.ordinal() > JitLevel.INTERPRETED.ordinal()) {
+                assert code != null;
+                return true;
+            }
+            return false;
         } finally {
             lock.readLock().unlock();
         }
     }
 
+    /**
+     * Subscribes current thread for waiting until compilation succeeds
+     * @param requiredLevel Thread will be signalled when this compilation will be reached
+     * @return code of compiled methods, which optimisation corresponds to required level
+     */
     public CompiledMethod waitCompilation(JitLevel requiredLevel) {
         lock.writeLock().lock();
         try {
@@ -87,7 +119,7 @@ public class CompilationUnit {
         this.workersBound = workersBound;
     }
 
-    // Transition to CREATED -> ON_COMPILATION
+    // Transition to CREATED -> ON_COMPILATION | COMPILED -> ON_COMPILATION
     // Happens under the lock but compilation is async
     private void startCompilation(JitLevel required) {
         if (state == State.CREATED || state == State.COMPILED) {
@@ -136,8 +168,7 @@ public class CompilationUnit {
                 level = requiredLevel;
                 state = State.COMPILED;
 
-                // System.out.println("Compiled: " + methodID.id());
-
+                // signAll all is necessary here
                 isCompiled.signalAll();
             } finally {
                 lock.writeLock().unlock();
@@ -154,6 +185,7 @@ public class CompilationUnit {
         return JitLevel.L2;
     }
 
+    // just ugly thing that needed because the number of workers isn't provided as static
     public static boolean isPoolInitialized() {
         wierdWorkersLock.readLock().lock();
         try {

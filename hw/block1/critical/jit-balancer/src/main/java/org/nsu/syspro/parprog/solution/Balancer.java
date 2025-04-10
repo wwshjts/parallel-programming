@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * Manges compilation resources
+ * The class is the intermediary between user threads and compilation units
  */
 public class Balancer {
     private final static ConcurrentHashMap<Long, CompilationUnit> units = new ConcurrentHashMap<>();
@@ -37,7 +37,7 @@ public class Balancer {
         return units.get(id).getCode();
     }
 
-    // might be blocking
+
     public void incrementHotness(MethodID methodID) {
         var unit = units.computeIfAbsent(methodID.id(), id -> new CompilationUnit(methodID, engine, threadBound));
         unit.incrementHotness();
