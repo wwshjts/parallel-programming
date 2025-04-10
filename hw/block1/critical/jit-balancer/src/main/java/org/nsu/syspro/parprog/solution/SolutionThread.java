@@ -21,20 +21,23 @@ public class SolutionThread extends UserThread {
         final long id = methodID.id();
         final long hotLevel = hotness.getOrDefault(id, 0L);
         hotness.put(id, hotLevel + 1);
+        ExecutionResult result;
 
         if (balancer.isCompiled(methodID)) {
-            return exec.execute(balancer.getCompiledMethod(methodID));
+            result = exec.execute(balancer.getCompiledMethod(methodID));
+        } else {
+            result = exec.interpret(methodID);
+
+            if (hotLevel > 7_000) {
+                balancer.scheduleCompilation(methodID);
+            }
+
+            if (hotLevel > Tuner.interpretationLimit) {
+                balancer.waitCompilation(methodID);
+            }
         }
 
-        if (hotLevel > Tuner.l1ExecutionLimit) {
-            return exec.execute(balancer.waitCompilation(methodID));
-        }
-
-        if (hotLevel > Tuner.localCommitThreshold) {
-            balancer.scheduleCompilation(methodID);
-        }
-
-        return exec.interpret(methodID);
+        return result;
     }
 
 }
