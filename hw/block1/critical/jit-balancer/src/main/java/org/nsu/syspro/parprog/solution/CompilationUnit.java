@@ -4,6 +4,7 @@ import org.nsu.syspro.parprog.external.CompilationEngine;
 import org.nsu.syspro.parprog.external.CompiledMethod;
 import org.nsu.syspro.parprog.external.MethodID;
 
+import java.awt.event.HierarchyBoundsAdapter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
@@ -20,7 +21,7 @@ public class CompilationUnit {
     private final Condition isCompiled = lock.writeLock().newCondition();
     private long hotness = 0;
 
-    private JitLevel level = JitLevel.INTERPRETED;
+    private JitLevel level          = JitLevel.INTERPRETED;
     private CompiledMethod code     = null;
     private State state             = State.CREATED;
 
@@ -148,7 +149,9 @@ public class CompilationUnit {
     private static JitLevel hotnessToLevel(long hotness) {
         if (hotness < Tuner.l1CompilationThreshold) {
             return JitLevel.INTERPRETED;
+        } else if (hotness < Tuner.l2CompilationThreshold) {
+            return JitLevel.L1;
         }
-        return JitLevel.L1;
+        return JitLevel.L2;
     }
 }
