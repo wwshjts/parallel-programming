@@ -27,8 +27,16 @@ public class Tuner {
     /**
      * When global hotness of method reaches this threshold, then it is scheduled to l2 compilation
      */
-    public static final Integer l2CompilationThreshold = 90_000;
+    public static final int l2CompilationThreshold = 90_000;
 
+    // ------------------ Check invariants ----------------
+    public static boolean checkInvariants() {
+        assert l1CompilationThreshold < interpretationLimit;
+        assert l2CompilationThreshold < l1ExecutionLimit;
+        return true;
+    }
+
+    private final static boolean _inv = checkInvariants();
 
     // this is a 'static' collection of constants, so no instances should be created
     private Tuner() {}

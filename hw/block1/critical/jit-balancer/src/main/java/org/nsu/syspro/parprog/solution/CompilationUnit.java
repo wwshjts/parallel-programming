@@ -54,7 +54,7 @@ public class CompilationUnit {
         lock.writeLock().lock();
         try {
             if (requiredLevel.ordinal() > level.ordinal()) {
-                startCompilation(requiredLevel);
+                assert state == State.ON_COMPILATION;
 
                 while (state != State.COMPILED) isCompiled.await();
 
