@@ -35,7 +35,7 @@ public class Balancer {
         var unit = new CompilationUnit(methodID, engine);
         units.putIfAbsent(methodID.id(), unit);
         unit = units.get(methodID.id());
-        unit.startCompilation();
+        unit.startCompilation(CompilationUnit.JitLevel.L1);
     }
 
     public CompiledMethod waitCompilation(MethodID methodID) {
