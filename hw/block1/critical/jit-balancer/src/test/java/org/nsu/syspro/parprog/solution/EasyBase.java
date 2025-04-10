@@ -36,26 +36,7 @@ public abstract class EasyBase extends TestLevels {
         env.terminate(1);
     }
 
-    @Test
-    void myTest() throws InterruptedException {
-       final var env = testEnvironment();
-       final var method = TestMethod.of();
 
-       final long threads = 10300;
-       final long times = 2 / threads + 1;
-
-       for (long i = 0; i < threads; i++) {
-            env.startSeparateUserThread(
-                    () -> {
-                        for (long t = 0; t < times; t++) {
-                            env.checkedExec(method);
-                        }
-                    }
-            );
-       }
-
-        env.terminate(10);
-    }
 
 
     @EnabledIf("easyEnabled")
@@ -110,11 +91,5 @@ public abstract class EasyBase extends TestLevels {
         ).join();
 
         env.terminate(1);
-    }
-
-    @Test
-    @Timeout(2)
-    void local_hash_test() throws InterruptedException {
-        final var env = testEnvironment();
     }
 }
