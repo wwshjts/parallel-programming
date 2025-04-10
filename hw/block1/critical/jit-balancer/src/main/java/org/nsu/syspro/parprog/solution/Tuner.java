@@ -20,6 +20,8 @@ public class Tuner {
 
     // ------------------ User thread settings ----------------
 
+    public static final int l1CompilationThreshold = 6_000;
+
 
     private Tuner() {}
 }

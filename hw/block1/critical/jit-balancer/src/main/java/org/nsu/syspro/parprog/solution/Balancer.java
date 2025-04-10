@@ -38,6 +38,12 @@ public class Balancer {
         unit.startCompilation(CompilationUnit.JitLevel.L1);
     }
 
+    // might be blocking
+    public void incrementHotness(MethodID methodID) {
+        units.computeIfAbsent(methodID.id(), id -> new CompilationUnit(methodID, engine)).incrementHotness();
+    }
+
+
     public CompiledMethod waitCompilation(MethodID methodID) {
         long id = methodID.id();
         assert units.containsKey(id);

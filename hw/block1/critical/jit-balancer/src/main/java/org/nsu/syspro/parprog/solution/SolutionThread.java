@@ -28,14 +28,12 @@ public class SolutionThread extends UserThread {
         } else {
             result = exec.interpret(methodID);
 
-            if (hotLevel > 7_000) {
-                balancer.scheduleCompilation(methodID);
-            }
-
             if (hotLevel > Tuner.interpretationLimit) {
                 balancer.waitCompilation(methodID);
             }
         }
+
+        balancer.incrementHotness(methodID);
 
         return result;
     }

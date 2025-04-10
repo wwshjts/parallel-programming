@@ -6,6 +6,8 @@ import org.nsu.syspro.parprog.external.MethodID;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.*;
 
 public class CompilationUnit {
@@ -16,6 +18,7 @@ public class CompilationUnit {
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Condition isCompiled = lock.writeLock().newCondition();
+    private AtomicLong hotness = new AtomicLong(0);
 
     private JitLevel level = JitLevel.INTERPRETED;
     private CompiledMethod code     = null;
@@ -24,6 +27,17 @@ public class CompilationUnit {
     private enum State {
         CREATED, ON_COMPILATION, COMPILED
     }
+
+    // Potentially blocking
+    public void incrementHotness() {
+        JitLevel hotLevel = hotnessToLevel(hotness.addAndGet(1));
+
+        if (hotLevel.ordinal() > level.ordinal()) {
+            startCompilation(hotLevel);
+        }
+
+    }
+
 
     public boolean isCompiled() {
         lock.readLock().lock();
@@ -101,15 +115,12 @@ public class CompilationUnit {
         public void run() {
             // No switch expressions :(
             CompiledMethod newCode;
-            JitLevel newLevel;
             switch (requiredLevel)  {
                 case L1:
                     newCode = engine.compile_l1(methodID);
-                    newLevel = JitLevel.L1;
                     break;
                 case L2:
                     newCode = engine.compile_l2(methodID);
-                    newLevel = JitLevel.L2;
                     break;
                 default:
                     assert false : "Wrong state of state machine: wrong required Jit: " + requiredLevel;
@@ -133,4 +144,10 @@ public class CompilationUnit {
         }
     }
 
+    private static JitLevel hotnessToLevel(long hotness) {
+        if (hotness < Tuner.l1CompilationThreshold) {
+            return JitLevel.INTERPRETED;
+        }
+        return JitLevel.L1;
+    }
 }
