@@ -41,6 +41,10 @@ public class SolutionThread extends UserThread {
             balancer.waitCompilation(methodID, CompilationUnit.JitLevel.L1);
         }
 
+        // we can update compiledMethods every time because JitLevel monotonically increases
+        // it is guranteed by CompilationUnit state-machine. Also, these units are unique
+        // so every time we update map to the same method, or to method with
+        // higher JitLevel
         if (balancer.isCompiled(methodID)) {
             compiledMethods.put(id, balancer.getCompiledMethod(methodID));
         }
