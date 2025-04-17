@@ -218,6 +218,10 @@ public class TestEnvironment {
                 u("l2Compilations_end", EventType.L2_COMPILATION_END);
     }
 
+    public long getl2CompilationStart() {
+       return counter(EventType.L1_COMPILATION_START);
+    }
+
     private class TestExecutionEngine implements ExecutionEngine {
         private final Duration interpret;
         private final Duration l1;

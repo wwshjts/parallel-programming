@@ -10,6 +10,7 @@ import org.nsu.syspro.parprog.helpers.TestEnvironment;
 import org.nsu.syspro.parprog.helpers.TestLevels;
 import org.nsu.syspro.parprog.helpers.TestMethod;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -34,6 +35,9 @@ public abstract class EasyBase extends TestLevels {
         sleepSeconds(1);
         env.terminate(1);
     }
+
+
+
 
     @EnabledIf("easyEnabled")
     @ParameterizedTest
