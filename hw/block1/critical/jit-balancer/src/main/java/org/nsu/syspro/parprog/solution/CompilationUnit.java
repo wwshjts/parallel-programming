@@ -4,8 +4,10 @@ import org.nsu.syspro.parprog.external.CompilationEngine;
 import org.nsu.syspro.parprog.external.CompiledMethod;
 import org.nsu.syspro.parprog.external.MethodID;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.locks.*;
 
 /**
@@ -22,6 +24,7 @@ public class CompilationUnit {
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Condition isCompiled = lock.writeLock().newCondition();
+    private Future<CompiledMethod> promise = null;
     private long hotness = 0;
     private final int workersBound;
 
@@ -46,7 +49,7 @@ public class CompilationUnit {
         lock.writeLock().lock();
         try {
             JitLevel requiredLevel = hotnessToLevel(++hotness);
-            if (requiredLevel.ordinal() > level.ordinal()) {
+            if ((requiredLevel.ordinal() > level.ordinal()) && (state != State.ON_COMPILATION)) {
                 startCompilation(requiredLevel);
             }
         } finally {
@@ -77,26 +80,20 @@ public class CompilationUnit {
         }
     }
 
+
     /**
-     * Subscribes current thread for waiting until compilation succeeds
-     * @param requiredLevel Thread will be signalled when this compilation will be reached
-     * @return code of compiled methods, which optimisation corresponds to required level
+     * Method just reads information that already contained in the unit.
+     * This method doesn't enforce compilation.
+     * Use with caution.
+     * @return Promise of compiled method.
      */
-    public CompiledMethod waitCompilation(JitLevel requiredLevel) {
-        lock.writeLock().lock();
+    public Future<CompiledMethod> getCompilationPromise() {
+        lock.readLock().lock();
         try {
-            if (requiredLevel.ordinal() > level.ordinal()) {
-                assert state == State.ON_COMPILATION;
-
-                while (state != State.COMPILED) isCompiled.await();
-
-                assert requiredLevel.ordinal() == level.ordinal();
-            }
-            return code;
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            assert promise != null && state.ordinal() > State.CREATED.ordinal();
+            return promise;
         } finally {
-            lock.writeLock().unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -113,6 +110,15 @@ public class CompilationUnit {
 
     }
 
+    public JitLevel compilationLevel() {
+        lock.readLock().lock();
+        try {
+            return level;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     public CompilationUnit(MethodID methodID, CompilationEngine engine, int workersBound) {
         this.methodID = methodID;
         this.engine = engine;
@@ -126,7 +132,7 @@ public class CompilationUnit {
             assert required.ordinal() > level.ordinal();
             // System.out.println("Starting compile" + methodID.id());
             state = State.ON_COMPILATION;
-            compilerWorkers.submit(new CompileTask(required)); // start compile asynchronously
+            promise = compilerWorkers.submit(new CompileTask(required)); // start compile asynchronously
         }
     }
 
@@ -137,7 +143,7 @@ public class CompilationUnit {
 
     // The 'function' that async compiles method, then
     // makes transition of state machine
-    private class CompileTask implements Runnable {
+    private class CompileTask implements Callable<CompiledMethod> {
         private JitLevel requiredLevel;
 
         public CompileTask(JitLevel localLevel) {
@@ -145,7 +151,7 @@ public class CompilationUnit {
         }
 
         @Override
-        public void run() {
+        public CompiledMethod call() {
             // No switch expressions :(
             CompiledMethod newCode;
             switch (requiredLevel)  {
@@ -169,7 +175,7 @@ public class CompilationUnit {
                 state = State.COMPILED;
 
                 // signAll all is necessary here
-                isCompiled.signalAll();
+                return newCode;
             } finally {
                 lock.writeLock().unlock();
             }
