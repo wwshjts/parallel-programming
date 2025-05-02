@@ -1,0 +1,351 @@
+\documentclass[a4paper, 12pt]{extarticle}
+
+\input{../../slides/common/slide-plan.tex}
+
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+
+\usepackage{enumerate}
+
+\usepackage{hyperref}
+\usepackage{multirow} 
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usetikzlibrary{automata,positioning}
+
+\geometry{a4paper,top=1.5cm,bottom=1.5cm,bindingoffset=0cm}
+\geometry{left=2cm,textwidth=17cm}
+% \linespread{1.0}
+  
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{verbatim}
+
+\title{}
+\author{}
+\date{}
+
+
+\newcommand{\threadSafetySimple}{Неформальный подход к потоковой безопасности (thread-safety), примеры. Ключевые свойства многопоточного алгоритма: безопасность/корректность (safety), живность (liveness), производительность.}
+
+\newcommand{\mutexBasics}{Взаимное исключение. Критическая секция (mutex). Admission policy. Реентерабельность (reentrancy), честность (fairness), голодание (starvation).}
+\newcommand{\condVarBasics}{Передача сигнала от одного потока другому (signalling). Условная переменная (condition variable).}
+
+\newcommand{\mutexDesign}{Блокировка кода (code locking), блокировка данных (data locking). Расщепление мьютексов (lock splitting). Упорядочивание критических секций для предотвращения состояния тупика (lock ordering, deadlock prevention).}
+
+\newcommand{\commonProblems}{Проблема потерянного сигнала (lost signal), устаревания условия (predicate invalidation), внезапного пробуждения (spurious wakeup), грохочущего стада (thundering herd),
+инверсии приоритета (priority inversion), голодания (starvation), конвоя (lock convoy). }
+
+\newcommand{\foundationBasics}{Формализация многопоточного исполнения: линия времени, атомарное событие (event), трасса исполнения потока (trace model), временной интервал. Частичный порядок, отношение предшествования (precedence), его свойства.}
+
+\newcommand{\foundationMutex}{Формальное определение взаимного исключения (mutual exclusion), отсутствия тупика (deadlock freedom), отсутствия голодания (starvation freedom). }
+
+\newcommand{\progressBasics}{Условия прогресса (progress conditions). Dependent blocking progress conditions. Примеры. Non-blocking progress conditions. Примеры.  Dependent non-blocking progress conditions. Пример. Теорема о связи условий прогресса между собой. }
+
+\newcommand{\regBasics}{Регистр (register): емкость (capacity), поддерживаемая конкурентность (concurrency), гарантии консистентности (consistency). Пространство регистров. Wait-free реализация объекта.}
+
+\newcommand{\perfProbForTAS}{Проблемы масштабирования многопоточных систем, вызванные работой алгоритмов когерентности кешей. Вычислительные системы, использующие шину данных (bus-based architectures). Репликация линий кеша (cache line replication). Когерентность кешей (cache coherence). Проблема массовой инвалидации данных (invalidation storm).}
+
+
+
+
+
+\begin{document}
+
+\section*{Вопросы по курсу "Параллельное программирование"}
+
+\section{Лекция~\introNum: \introTopic}
+
+Ключевые понятия: \introKey
+
+\begin{enumerate}[\thesection .1]
+	
+	\item Конкурентность (concurrency) и параллелизм (parallelism). Системы разделения времени (time-sharing), многозадачность (multitasking). Процессы и потоки. Вытесняющая многозадачность и кооперативная многозадачность. Планировщик ОС: квант планирования, смена контекста, метрики эффективности планирования, стратегии планирования, алгоритм round-robin. Задачи, легко поддающиеся параллелизации (embarrassingly parallel problems). Закон Амдала.
+
+	\item Недетерминизм многопоточного исполнения, состояние гонки (race condition), гонка данных (data race). Word tearing. Видимость (visibility). Wait-for graph. Состояние тупика (deadlock). Инверсия приоритетов.
+\end{enumerate}
+
+\section{Лекция~\basicNum: \basicTopic}
+
+Ключевые понятия: \basicKey
+
+\begin{enumerate}[\thesection .1]
+	
+	\item \threadSafetySimple 
+
+	\mutexBasics 
+
+	\mutexDesign	
+	
+	Проблема lock convoy. Задача об обедающих философах (dining philosophers problem).
+
+	\item \threadSafetySimple 
+
+	\condVarBasics
+
+
+	Пример API: \texttt{wait/notify/notifyAll}. Пример API: \texttt{await/signal/signalAll}.
+	Проблема потерянного сигнала (lost signal), устаревания условия (predicate invalidation), внезапного пробуждения (spurious wakeup). Честность (fairness). Голодание (starvation).
+
+\end{enumerate}
+
+
+\section{Лекция~\syncPrimitivesNum: \syncPrimitivesTopic}
+
+Ключевые понятия: \syncPrimitivesKey
+
+\begin{enumerate}[\thesection .1]
+	\item \mutexBasics \condVarBasics
+
+	\textbf{Мониторы в языке Java} (built-in monitor). Описание API. Ключевое слово \texttt{synchronized}. Admission policy. Реентерабельность (reentrancy), честность (fairness), владение (ownership). 
+
+	\mutexDesign
+
+	\commonProblems	
+
+	\item \mutexBasics 
+
+	\condVarBasics
+
+	\textbf{CountDownLatch}.	
+
+	\commonProblems		
+
+	\item \mutexBasics 
+
+	\condVarBasics
+
+	\textbf{CyclicBarrier}.
+
+	\commonProblems		
+
+	\item \mutexBasics 
+
+	\condVarBasics
+
+	\textbf{Semaphore}.
+
+	\commonProblems		
+	
+	\item \mutexBasics 
+
+	\condVarBasics
+
+	\textbf{ReadWriteLock}. Предпочтение читающего или пишущего потока. Усиление (read-to-write promotion) и ослабление (write-to-read downgrade).  
+
+	\commonProblems		
+
+	\item \mutexBasics 
+
+	\condVarBasics
+
+	\textbf{Thread pools}: \texttt{ThreadFactory}, \texttt{Executor}, \texttt{Future}, \texttt{ExecutorService}, \texttt{fixedThreadPool}, \texttt{singleThreadExecutor}, \texttt{cachedThreadPool}.
+
+	Проблемы, характерные для пулов потоков: взаимные блокировки, утечки памяти, голодание, искажение владения (ownership, thread-local).
+	
+	\item \mutexBasics 
+
+	\condVarBasics
+
+	\textbf{Шаблон ''производитель-потребитель''} (producer-consumer). Балансировка нагрузки (load balancing). Проблемы балансировки нагрузки для push-based протоколов.	
+	Шаблоны разделения работы: work arbitrage, work dealing, work stealing. Fork-join модель, её преимущества и недостатки.
+
+\end{enumerate}
+
+
+\section{Лекция~\patternsNum: \patternsTopic}
+
+Ключевые понятия: \patternsKey
+
+\begin{enumerate}[\thesection .1]
+	\item Отмена задач (cancellation, interruption).
+	Прерывание задач (task cancellation) и прерывание потоков (thread cancellation).
+	Односторонняя отмена задач (forced cancellation). 
+	Кооперативная отмена задач с помощью cancellation token.
+	Кооперативная отмена задач с помощью cancellation points.
+	Прерываемые (interruptible) и непрерываемые (uninterruptible) методы.
+	Политики распространения отмены задач. 
+	Упорядочение асинхронных событий: отмена, сигнал условной переменной, срабатывания таймера (interruption, notification, timeout ordering).	
+
+	\item Техники декомпозиции многопоточных программ. Конечный автомат. Перенос функций (function shipping). Выделенный поток (designated thread).
+	Разбиение потоков на группы. Разбиение данных на кластеры. Приватизация данных (privatization). Репликация (replication).
+	Группировка однотипных событий (batching). Владение (ownership) и привязка к потоку исполнения (thread confinement).
+\end{enumerate}
+
+
+\section{Лекция~\extraBasicsNum: \extraBasicsTopic}
+
+Ключевые понятия: \extraBasicsKey
+
+\begin{enumerate}[\thesection .1]
+
+	\item Документирование многопоточных инвариантов. Проверка инвариантов потоковой безопасности для различных структур данных.
+	Assertions. Препятствия для написания надежных многопоточных программ.	 
+
+	\item Тестирование многопоточных программ. Юнит-тестирование, стресс-тестирование. Построение и анализ трасс исполнения.
+	Проектирование тестов, исполняемых в многопоточной среде. Анализ вероятности негативного сценария, оценка требуемых вычислительных ресурсов для тестирования.  
+	
+	\item Инструменты анализа многопоточных программ. Статический анализ и поиск дефектов. Проверки времени исполнения.
+	Мониторинг и observability API. Контроль порядка исполнения конкурентной программы (scheduling control): с помощью тестов (mocking, inheritance), с помощью языковых средств (aspects, bytecode transformation),
+	с помощью операционной системы (chaos mode execution). 
+
+\end{enumerate}
+
+
+\section{Лекция~\foundationsNum: \foundationsTopic}
+
+Ключевые понятия: \foundationsKey
+
+\begin{enumerate}[\thesection .1]
+
+	\item \foundationBasics
+
+	\foundationMutex
+
+	Алгоритмы \textbf{LockOne}, \textbf{LockTwo}, алгоритм Петерсона, доказательства их основных свойств.
+	
+	Теорема о нижней границе: сколько необходимо независимых ячеек памяти, чтобы добиться взаимного исключения N потоков.
+	
+	\item \foundationBasics
+
+	\foundationMutex
+
+	Алгоритм \textbf{FilterLock}, доказательства его основных свойств.
+
+	Теорема о нижней границе: сколько необходимо независимых ячеек памяти, чтобы добиться взаимного исключения N потоков.
+
+	\item \foundationBasics
+
+	Последовательный объект (sequential object), последовательная спецификация (sequential specification).
+	Понятие о многопоточной согласованности (concurrent consistency).
+	Линеаризуемое исполнение (linearizable execution), линеаризуемый объект (linearizable object), точка линеаризации (linearization point). Примеры.
+
+\end{enumerate}
+
+
+\section{Лекция~\foundationsPlusNum: \foundationsPlusTopic}
+
+Ключевые понятия: \foundationsPlusKey
+
+\begin{enumerate}[\thesection .1]
+
+	\item \progressBasics
+
+	\regBasics
+
+	\textbf{Теоремы о выразительной силе}:
+	\begin{itemize}
+		\item SRSW Safe Boolean -> MRSW Safe Boolean
+		\item MRSW Safe Boolean -> MRSW Regular Boolean
+		\item MRSW Regular Boolean -> MRSW Regular
+	\end{itemize}	 
+
+	\item \progressBasics
+
+	\regBasics
+
+	\textbf{Теоремы о выразительной силе}:
+	\begin{itemize}
+		\item MRSW Regular -> SRSW Atomic 
+		\item SRSW Atomic -> MRSW Atomic		
+	\end{itemize}	 
+
+	\item \progressBasics
+
+	\regBasics
+
+	Атомарный снимок состояния N регистров (atomic snapshot). Алгоритм \textbf{CleanCollect} и его недостатки, пример ABA проблемы.
+	Алгоритм \textbf{SimpleSnapshot}, обоснование корректности и его основных свойств.
+
+\end{enumerate}
+
+
+\section{Лекция~\atomicsNum: \atomicsTopic}
+
+Ключевые понятия: \atomicsKey
+
+\begin{enumerate}[\thesection .1]
+
+	\item \progressBasics
+
+	Консенсус. Теорема о невозможности достичь N-потокового консенсуса с использованием только атомарных регистров. Практические следствия. Consensus number.
+
+	Read-modify-write objects. Примеры.
+
+	Теорема: \texttt{compareAndSet} обладает $\infty$ consensus number. Доказательство и практические следствия.
+
+	\item Взаимное исключения с помощью циклов и read-modify-write операций. Test-and-set-lock. Test-and-test-and-set-lock.
+	Exponential backoff.
+
+	\perfProbForTAS
+	
+
+	\item \progressBasics
+
+	Lock-free реализация потокобезопасного LIFO контейнера. Переиспользование памяти и ABA проблема.
+
+	\perfProbForTAS
+
+
+\end{enumerate}
+
+
+\newcommand{\globMemOverview}{Наивные способы синхронизации глобальной памяти. Кеш-линия (cache line). Истинное и ложное разделение данных (true sharing, false sharing). Когерентность (coherence). 
+Ослабленные требования к консистентности независимых ячеек памяти. }
+
+
+\section{Лекция~\cacheCoherencyNum: \cacheCoherencyTopic}
+
+Ключевые понятия: \cacheCoherencyKey
+
+\begin{enumerate}[\thesection .1]
+	\item \globMemOverview	
+
+	Построение эффективной подсистемы памяти: кеширование, шаблон ''репликация'', протокол обмена сообщениями. MESI протокол и примеры его работы. Преимущества и недостатки. 
+
+	\item \globMemOverview 
+
+	MESI протокол: состояния и их семантика, виды сообщений и их классификация (синхронные/асинхронные). Буферизация записи (store buffering), требования корректности (store forwarding).
+
+	\item \globMemOverview 
+	
+	MESI протокол: состояния и их семантика, виды сообщений и их классификация (синхронные/асинхронные). Буферизация чтений (load buffering). Топология шины данных (interconnect topology).
+
+	\item \globMemOverview 
+
+	Модель памяти процессора (hardware memory model). Слабая модель памяти (weak memory model). Барьеры памяти (memory barriers), их классификация. Преимущества и недостатки барьерного подхода к написанию корректных конкурентных программ.	
+
+\end{enumerate}
+
+
+\newcommand{\langMM}{Модель памяти языка программирования (language memory model). Мотивация, цели, сложности при написании.}
+
+
+\section{Лекция~\langMMNum: \langMMTopic}
+
+Ключевые понятия: \langMMKey
+
+\begin{enumerate}[\thesection .1]
+	\item Оптимизации компилятора: влияние на наблюдаемое поведение однопоточной и многопоточной программы. Видимость операций с памятью (visibility).
+	Барьеры для оптимизаций (compiler barriers), их таксономия. Необходимость использовать специальные языковые конструкции для ''борьбы'' с оптимизациями.
+	
+	\item \langMM 
+
+	Неизменяемость (immutability). Декларативный подход к описанию параллельных вычислений.
+	Строгая консистентность (strict consistency) с помощью взаимного исключения.
+	Строгая консистентность (strict consistency) с помощью однопоточного исполнения.
+	Реализация потоков на уровне библиотеки языка: преимущества и недостатки.
+	Формальная модель памяти языка программирования. Альтернативы.
+	
+	\item \langMM 
+	
+	Видимость операций с памятью (visibility). Load-acquire/store-release подход к описанию консистентности. Ключевое слово \texttt{volatile}. Рекомендации к использованию.
+
+\end{enumerate}
+
+\end{document}
